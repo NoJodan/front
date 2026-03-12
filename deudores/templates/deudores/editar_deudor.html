@@ -1,0 +1,53 @@
+{% extends 'deudores/base.html' %}
+{% block title %}Editar Deudor{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7">
+
+        <div class="d-flex align-items-center mb-4">
+            <div>
+                <h4 class="mb-0 fw-bold text-dark">Editar Deudor</h4>
+                <small class="text-muted">{{ deudor.nombre }} {{ deudor.apellido }}</small>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div style="height:4px; background:linear-gradient(90deg,#0d6efd,#0dcaf0); border-radius:8px 8px 0 0;"></div>
+            <div class="card-body p-4">
+
+                <div class="text-center mb-4">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" style="width:64px; height:64px;">
+                        <i class="bi bi-person-gear fs-3 text-primary"></i>
+                    </div>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary small text-uppercase">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle"></i> {{ field.errors }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+
+                    <hr class="my-4">
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{% url 'detalle_deudor' deudor.pk %}" class="btn btn-outline-secondary px-4">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-save2"></i> Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

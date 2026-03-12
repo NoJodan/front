@@ -1,0 +1,325 @@
+{% extends 'deudores/base.html' %}
+{% block title %}Agregar Deudor a mi Cartera{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-5">
+    <a href="{% url 'inicio' %}" class="btn btn-sm btn-light border rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i> Volver
+    </a>
+    <div>
+        <h3 class="fw-bold mb-0 text-dark" style="font-size:1.4rem;">Agregar Deudor a mi Cartera</h3>
+        <p class="text-muted small mb-0">Selecciona un deudor disponible para gestionarlo</p>
+    </div>
+</div>
+
+<!-- Indicador informativo -->
+<div class="info-banner mb-4">
+    <i class="bi bi-info-circle-fill text-primary me-2"></i>
+    <span class="small">Solo se muestran deudores <strong>sin gestor asignado</strong> o cuyo gestor anterior esté <strong>inactivo</strong>.</span>
+</div>
+
+<!-- BUSCADOR -->
+<div class="search-wrapper mb-4">
+    <div class="search-box">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text" id="buscadorDeudor" placeholder="Buscar por nombre, apellido o cédula…" autocomplete="off">
+        <button type="button" id="btnLimpiarBusqueda" class="clear-btn d-none" onclick="limpiarBusqueda()" title="Limpiar búsqueda">
+            <i class="bi bi-x-circle-fill"></i>
+        </button>
+    </div>
+    <span id="contadorResultados" class="results-count"></span>
+</div>
+
+<!-- Sin resultados -->
+<div id="sinResultados" class="no-results d-none">
+    <i class="bi bi-search opacity-25 display-5 d-block mb-2"></i>
+    <p class="mb-0 fw-semibold text-dark">Sin resultados</p>
+    <p class="text-muted small">No se encontraron deudores que coincidan con "<span id="terminoBusqueda"></span>"</p>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius:14px; overflow:hidden;">
+    <div style="height:3px; background:linear-gradient(90deg,#3b6ef8,#60a5fa);"></div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead style="background:#f8faff;">
+                    <tr>
+                        <th class="ps-4 border-0 text-uppercase small fw-bold text-muted" style="letter-spacing:.5px;">Deudor</th>
+                        <th class="border-0 text-uppercase small fw-bold text-muted">Cédula</th>
+                        <th class="border-0 text-uppercase small fw-bold text-muted">Teléfono</th>
+                        <th class="border-0 text-uppercase small fw-bold text-muted text-center">Estado Gestor</th>
+                        <th class="border-0 text-uppercase small fw-bold text-muted text-center">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for deudor in deudores_disponibles %}
+                    <tr class="fila-deudor" data-busqueda="{{ deudor.nombre|lower }} {{ deudor.apellido|lower }} {{ deudor.cedula }}">
+                        <td class="ps-4 py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar-initials">{{ deudor.nombre|slice:":1" }}{{ deudor.apellido|slice:":1" }}</div>
+                                <div>
+                                    <div class="fw-semibold text-dark" style="font-size:.9rem;">{{ deudor.nombre }} {{ deudor.apellido }}</div>
+                                    <div class="text-muted" style="font-size:.78rem;">{{ deudor.email|default:"Sin correo" }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="font-monospace small text-secondary">{{ deudor.cedula }}</span></td>
+                        <td><span class="small">{{ deudor.telefono|default:"—" }}</span></td>
+                        <td class="text-center">
+                            {% if deudor.gestor %}
+                                <span class="badge rounded-pill px-3 py-2 fw-medium" style="background:rgba(245,158,11,0.1);color:#b45309;font-size:.75rem;">
+                                    <i class="bi bi-exclamation-circle me-1"></i>Gestor inactivo
+                                </span>
+                            {% else %}
+                                <span class="badge rounded-pill px-3 py-2 fw-medium" style="background:rgba(59,110,248,0.08);color:#3b6ef8;font-size:.75rem;">
+                                    Disponible
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <!-- Trigger modal de confirmación -->
+                            <button type="button"
+                                class="btn btn-sm rounded-pill px-3 fw-semibold"
+                                style="background:#3b6ef8;color:#fff;border:none;font-size:.8rem;"
+                                onclick="confirmarSeleccion('{{ deudor.pk }}', '{{ deudor.nombre }} {{ deudor.apellido }}')">
+                                <i class="bi bi-plus-lg me-1"></i> Seleccionar
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-check-circle fs-1 d-block mb-2 opacity-25"></i>
+                            <p class="mb-0">No hay deudores disponibles para asignar.</p>
+                            <p class="small">Todos los deudores ya tienen un gestor activo asignado.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE CONFIRMACIÓN -->
+<div class="modal fade" id="modalConfirmar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:16px; overflow:hidden;">
+            <div style="height:4px; background:linear-gradient(90deg,#3b6ef8,#60a5fa);"></div>
+            <div class="modal-body p-4 p-md-5 text-center">
+                <div class="modal-icon mb-4">
+                    <i class="bi bi-person-check-fill"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-2">¿Agregar a tu cartera?</h5>
+                <p class="text-muted mb-1" style="font-size:.9rem;">Estás a punto de gestionar a:</p>
+                <p class="fw-bold text-dark mb-4" id="nombreDeudorModal" style="font-size:1.1rem;"></p>
+                <div class="alert border-0 mb-4 text-start" style="background:rgba(59,110,248,0.07);border-radius:10px;">
+                    <i class="bi bi-info-circle-fill text-primary me-2"></i>
+                    <span class="small" style="color:#1e40af;">Serás responsable de gestionar los pagos y seguimiento de este deudor.</span>
+                </div>
+                <div class="d-flex gap-3 justify-content-center">
+                    <button type="button" class="btn btn-light border px-4 rounded-pill" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <form id="formSeleccionar" method="POST" action="">
+                        {% csrf_token %}
+                        <button type="submit" class="btn rounded-pill px-4 fw-semibold" style="background:#3b6ef8;color:#fff;border:none;">
+                            <i class="bi bi-check-lg me-1"></i> Sí, agregar a mi cartera
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .info-banner {
+        background: rgba(59,110,248,0.06);
+        border: 1px solid rgba(59,110,248,0.15);
+        border-radius: 10px;
+        padding: 12px 16px;
+        display: flex; align-items: center;
+    }
+    .avatar-initials {
+        width:40px; height:40px; border-radius:10px;
+        background:rgba(59,110,248,0.1); color:#3b6ef8;
+        font-weight:700; font-size:.85rem;
+        display:flex; align-items:center; justify-content:center;
+    }
+    .modal-icon {
+        width:64px; height:64px; border-radius:50%;
+        background:rgba(59,110,248,0.1); color:#3b6ef8;
+        display:flex; align-items:center; justify-content:center;
+        font-size:1.8rem; margin:0 auto;
+    }
+
+    /* ── BUSCADOR ── */
+    .search-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+    .search-box {
+        position: relative;
+        flex: 1;
+        min-width: 240px;
+        max-width: 480px;
+    }
+    .search-box input {
+        width: 100%;
+        padding: .65rem 2.8rem .65rem 2.6rem;
+        font-size: .9rem;
+        color: #0f1623;
+        background: #fff;
+        border: 1.5px solid #e5e7eb;
+        border-radius: 50px;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        font-family: inherit;
+    }
+    .search-box input:focus {
+        border-color: #3b6ef8;
+        box-shadow: 0 0 0 3px rgba(59,110,248,0.1);
+    }
+    .search-box input::placeholder { color: #b0b7c3; }
+    .search-icon {
+        position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+        color: #9ca3af; font-size: .95rem; pointer-events: none;
+        transition: color 0.2s;
+    }
+    .search-box input:focus ~ .search-icon,
+    .search-box:focus-within .search-icon { color: #3b6ef8; }
+    .clear-btn {
+        position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+        background: none; border: none; padding: 0;
+        color: #b0b7c3; font-size: 1rem; cursor: pointer;
+        line-height: 1; transition: color 0.15s;
+    }
+    .clear-btn:hover { color: #ef4444; }
+    .results-count {
+        font-size: .78rem; font-weight: 600; color: #9ca3af;
+        white-space: nowrap;
+    }
+
+    /* Highlight en resultados */
+    .fila-deudor td { transition: opacity 0.15s; }
+    mark.hl {
+        background: rgba(59,110,248,0.15);
+        color: #1e40af;
+        border-radius: 3px;
+        padding: 0 2px;
+    }
+
+    /* Sin resultados */
+    .no-results {
+        text-align: center;
+        padding: 48px 20px;
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid #e5e7eb;
+    }
+</style>
+
+<script>
+function confirmarSeleccion(deudorId, nombreDeudor) {
+    document.getElementById('nombreDeudorModal').textContent = nombreDeudor;
+    document.getElementById('formSeleccionar').action = "{% url 'asignar_deudor' 0 %}".replace('/0/', '/' + deudorId + '/');
+    const modal = new bootstrap.Modal(document.getElementById('modalConfirmar'));
+    modal.show();
+}
+
+// ── BUSCADOR EN TIEMPO REAL ──
+(function () {
+    const input = document.getElementById('buscadorDeudor');
+    const btnLimpiar = document.getElementById('btnLimpiarBusqueda');
+    const contador = document.getElementById('contadorResultados');
+    const sinResultados = document.getElementById('sinResultados');
+    const terminoEl = document.getElementById('terminoBusqueda');
+    const cardTabla = document.querySelector('.card.border-0.shadow-sm');
+
+    const filas = Array.from(document.querySelectorAll('.fila-deudor'));
+    const totalOriginal = filas.length;
+
+    function normalizar(str) {
+        return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    }
+
+    function highlight(texto, termino) {
+        if (!termino) return texto;
+        const re = new RegExp('(' + termino.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        return texto.replace(re, '<mark class="hl">$1</mark>');
+    }
+
+    function buscar() {
+        const raw = input.value;
+        const termino = normalizar(raw);
+
+        // Mostrar / ocultar botón limpiar
+        btnLimpiar.classList.toggle('d-none', !raw);
+
+        let visibles = 0;
+
+        filas.forEach(fila => {
+            const datos = normalizar(fila.dataset.busqueda || '');
+            const coincide = !termino || datos.includes(termino);
+            fila.style.display = coincide ? '' : 'none';
+            if (coincide) visibles++;
+
+            // Resaltar nombre en la celda
+            if (termino && coincide) {
+                const celdaNombre = fila.querySelector('.fw-semibold.text-dark');
+                if (celdaNombre && celdaNombre._textoOriginal === undefined) {
+                    celdaNombre._textoOriginal = celdaNombre.textContent;
+                }
+                if (celdaNombre) {
+                    celdaNombre.innerHTML = highlight(celdaNombre._textoOriginal || celdaNombre.textContent, raw.trim());
+                }
+                const celdaCedula = fila.querySelector('.font-monospace');
+                if (celdaCedula && celdaCedula._textoOriginal === undefined) {
+                    celdaCedula._textoOriginal = celdaCedula.textContent;
+                }
+                if (celdaCedula) {
+                    celdaCedula.innerHTML = highlight(celdaCedula._textoOriginal || celdaCedula.textContent, raw.trim());
+                }
+            } else {
+                // Restaurar texto original
+                const celdaNombre = fila.querySelector('.fw-semibold.text-dark');
+                if (celdaNombre && celdaNombre._textoOriginal) celdaNombre.innerHTML = celdaNombre._textoOriginal;
+                const celdaCedula = fila.querySelector('.font-monospace');
+                if (celdaCedula && celdaCedula._textoOriginal) celdaCedula.innerHTML = celdaCedula._textoOriginal;
+            }
+        });
+
+        // Contador
+        if (termino) {
+            contador.textContent = visibles === 1 ? '1 resultado' : visibles + ' resultados';
+        } else {
+            contador.textContent = totalOriginal === 1 ? '1 deudor disponible' : totalOriginal + ' deudores disponibles';
+        }
+
+        // Sin resultados
+        const hayVacios = filas.some(f => f.dataset.busqueda === undefined); // fila vacía de Django
+        sinResultados.classList.toggle('d-none', visibles > 0 || totalOriginal === 0);
+        cardTabla.style.display = (visibles === 0 && termino && totalOriginal > 0) ? 'none' : '';
+        terminoEl.textContent = raw.trim();
+    }
+
+    input.addEventListener('input', buscar);
+
+    // Inicializar contador
+    if (totalOriginal > 0) {
+        contador.textContent = totalOriginal === 1 ? '1 deudor disponible' : totalOriginal + ' deudores disponibles';
+    }
+
+    window.limpiarBusqueda = function () {
+        input.value = '';
+        buscar();
+        input.focus();
+    };
+})();
+</script>
+
+{% endblock %}

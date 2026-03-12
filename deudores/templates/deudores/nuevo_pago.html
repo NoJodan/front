@@ -1,0 +1,232 @@
+{% extends 'deudores/base.html' %}
+{% block title %}Nuevo Pago — {{ deudor.nombre }}{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-5">
+    <a href="{% url 'detalle_deudor' deudor.pk %}" class="btn btn-sm btn-light border rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i> Volver al perfil
+    </a>
+    <div>
+        <h3 class="fw-bold mb-0 text-dark" style="font-size:1.4rem;">Registrar Nuevo Pago</h3>
+        <p class="text-muted small mb-0">Para <strong>{{ deudor.nombre }} {{ deudor.apellido }}</strong></p>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+
+        <!-- Deudor preseleccionado (solo informativo) -->
+        <div class="deudor-card mb-4">
+            <div class="deudor-avatar">{{ deudor.nombre|slice:":1" }}{{ deudor.apellido|slice:":1" }}</div>
+            <div>
+                <p class="fw-bold text-dark mb-0" style="font-size:.95rem;">{{ deudor.nombre }} {{ deudor.apellido }}</p>
+                <p class="text-muted mb-0" style="font-size:.78rem;"><i class="bi bi-card-text me-1"></i>{{ deudor.cedula }}</p>
+            </div>
+            <span class="ms-auto badge rounded-pill px-3 py-2" style="background:rgba(59,110,248,0.1);color:#3b6ef8;font-size:.72rem;font-weight:600;">
+                Deudor seleccionado
+            </span>
+        </div>
+
+        <div class="card border-0 shadow-sm" style="border-radius:14px; overflow:hidden;">
+            <div style="height:4px; background:linear-gradient(90deg,#22c55e,#34d399);"></div>
+            <div class="card-body p-4 p-md-5">
+
+                <div class="text-center mb-4">
+                    <div style="width:60px;height:60px;border-radius:50%;background:rgba(34,197,94,0.1);color:#22c55e;display:inline-flex;align-items:center;justify-content:center;font-size:1.6rem;">
+                        <i class="bi bi-cash-coin"></i>
+                    </div>
+                </div>
+
+                <!-- El form debe tener enctype para el archivo -->
+                <form method="POST" enctype="multipart/form-data" id="formNuevoPago" novalidate>
+                    {% csrf_token %}
+                    <!-- Campo oculto con el deudor preseleccionado -->
+                    <input type="hidden" name="deudor" value="{{ deudor.pk }}">
+
+                    {% for field in form %}
+                    {% if field.name != 'deudor' %}
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-muted small text-uppercase" style="letter-spacing:.5px;">
+                            {{ field.label }}
+                            {% if field.field.required %}<span class="text-danger ms-1">*</span>{% endif %}
+                        </label>
+
+                        {% if field.name == 'comprobante_pdf' %}
+                        <!-- Campo especial para PDF -->
+                        <div class="pdf-upload-area" id="pdfUploadArea" onclick="document.getElementById('id_comprobante_pdf').click()">
+                            <i class="bi bi-file-earmark-pdf-fill text-danger fs-2 mb-2"></i>
+                            <p class="fw-semibold text-dark mb-1" style="font-size:.9rem;">Subir comprobante PDF</p>
+                            <p class="text-muted mb-0" style="font-size:.78rem;">Haz clic para seleccionar o arrastra aquí</p>
+                            <p class="text-muted mt-1 mb-0" style="font-size:.72rem;">Solo archivos <strong>.pdf</strong> — Máx. 5MB</p>
+                        </div>
+                        <!-- Input oculto real -->
+                        <input type="file" id="id_comprobante_pdf" name="comprobante_pdf"
+                               accept=".pdf,application/pdf"
+                               class="d-none" onchange="validarPDF(this)">
+                        <!-- Preview del archivo seleccionado -->
+                        <div id="pdfPreview" class="pdf-preview d-none mt-2">
+                            <i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>
+                            <span id="pdfNombre" class="small fw-semibold text-dark"></span>
+                            <button type="button" class="btn btn-sm ms-auto text-danger p-0 border-0 bg-transparent" onclick="limpiarPDF()">
+                                <i class="bi bi-x-circle-fill"></i>
+                            </button>
+                        </div>
+                        <div id="pdfError" class="text-danger small mt-2 d-none">
+                            <i class="bi bi-exclamation-circle me-1"></i> Solo se permiten archivos en formato <strong>PDF</strong>.
+                        </div>
+
+                        {% else %}
+                        {{ field }}
+                        {% endif %}
+
+                        {% if field.errors %}
+                            {% for error in field.errors %}
+                            <div class="text-danger small mt-2 d-flex align-items-center gap-1">
+                                <i class="bi bi-exclamation-circle-fill"></i> {{ error }}
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+
+                    <hr class="my-4 opacity-25">
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{% url 'detalle_deudor' deudor.pk %}" class="btn btn-light border rounded-pill px-4">
+                            <i class="bi bi-x-lg me-1"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn rounded-pill px-5 fw-semibold" style="background:#22c55e;color:#fff;border:none;">
+                            <i class="bi bi-save2 me-1"></i> Guardar Pago
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+
+        <p class="text-muted small text-center mt-3">
+            <i class="bi bi-info-circle me-1"></i> Los campos con <span class="text-danger fw-bold">*</span> son obligatorios.
+        </p>
+
+    </div>
+</div>
+
+<style>
+    .deudor-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 14px 20px;
+        display: flex; align-items: center; gap: 14px;
+    }
+    .deudor-avatar {
+        width:42px; height:42px; border-radius:10px;
+        background:rgba(59,110,248,0.1); color:#3b6ef8;
+        font-weight:700; font-size:.9rem;
+        display:flex; align-items:center; justify-content:center;
+        flex-shrink:0;
+    }
+    /* Inputs estilizados */
+    input:not([type=file]):not([type=hidden]),
+    select, textarea {
+        display: block; width: 100%;
+        padding: .7rem 1rem; font-size: .92rem;
+        color: #212529; background: #f8faff;
+        border: 1px solid #e5e7eb; border-radius: 10px;
+        transition: all 0.2s;
+    }
+    input:not([type=file]):not([type=hidden]):focus,
+    select:focus, textarea:focus {
+        background: #fff; border-color: #3b6ef8;
+        outline: 0; box-shadow: 0 0 0 3px rgba(59,110,248,0.1);
+    }
+    /* Zona de subida PDF */
+    .pdf-upload-area {
+        border: 2px dashed #d1d5db; border-radius: 12px;
+        padding: 28px 20px; text-align: center;
+        cursor: pointer; transition: all 0.2s;
+        background: #fafafa;
+    }
+    .pdf-upload-area:hover {
+        border-color: #ef4444; background: rgba(239,68,68,0.03);
+    }
+    .pdf-upload-area.has-file {
+        border-color: #22c55e; background: rgba(34,197,94,0.04);
+    }
+    /* Preview del PDF */
+    .pdf-preview {
+        background: rgba(239,68,68,0.05);
+        border: 1px solid rgba(239,68,68,0.2);
+        border-radius: 10px; padding: 10px 14px;
+        display: flex; align-items: center;
+    }
+</style>
+
+<script>
+function validarPDF(input) {
+    const file = input.files[0];
+    const errorEl = document.getElementById('pdfError');
+    const previewEl = document.getElementById('pdfPreview');
+    const nombreEl = document.getElementById('pdfNombre');
+    const uploadArea = document.getElementById('pdfUploadArea');
+
+    errorEl.classList.add('d-none');
+    previewEl.classList.add('d-none');
+    uploadArea.classList.remove('has-file');
+
+    if (!file) return;
+
+    // Validar que sea PDF
+    const esPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!esPDF) {
+        errorEl.classList.remove('d-none');
+        input.value = '';
+        return;
+    }
+
+    // Mostrar preview
+    nombreEl.textContent = file.name;
+    previewEl.classList.remove('d-none');
+    uploadArea.classList.add('has-file');
+}
+
+function limpiarPDF() {
+    const input = document.getElementById('id_comprobante_pdf');
+    input.value = '';
+    document.getElementById('pdfPreview').classList.add('d-none');
+    document.getElementById('pdfError').classList.add('d-none');
+    document.getElementById('pdfUploadArea').classList.remove('has-file');
+}
+
+// Validación al enviar
+document.getElementById('formNuevoPago').addEventListener('submit', function(e) {
+    const input = document.getElementById('id_comprobante_pdf');
+    const errorEl = document.getElementById('pdfError');
+    if (input.files.length > 0) {
+        const file = input.files[0];
+        const esPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+        if (!esPDF) {
+            e.preventDefault();
+            errorEl.classList.remove('d-none');
+        }
+    }
+});
+
+// Drag and drop
+const dropArea = document.getElementById('pdfUploadArea');
+dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.style.borderColor = '#ef4444'; });
+dropArea.addEventListener('dragleave', () => { dropArea.style.borderColor = ''; });
+dropArea.addEventListener('drop', e => {
+    e.preventDefault();
+    const input = document.getElementById('id_comprobante_pdf');
+    const dt = new DataTransfer();
+    dt.items.add(e.dataTransfer.files[0]);
+    input.files = dt.files;
+    validarPDF(input);
+    dropArea.style.borderColor = '';
+});
+</script>
+
+{% endblock %}

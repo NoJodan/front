@@ -1,0 +1,330 @@
+{% extends 'deudores/base.html' %}
+{% block title %}Detalle: {{ deudor.nombre }}{% endblock %}
+
+{% block content %}
+{% with role=user.perfil.rol|default:"gestor" %}
+
+<!-- HEADER -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start mb-5 gap-3">
+    <div>
+        <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb mb-0" style="font-size:.8rem;">
+                <li class="breadcrumb-item"><a href="{% url 'lista_deudores' %}" class="text-decoration-none text-muted">Deudores</a></li>
+                <li class="breadcrumb-item active text-dark fw-semibold">Ficha de Cliente</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3 mt-2">
+            <div class="big-avatar">{{ deudor.nombre|slice:":1" }}{{ deudor.apellido|slice:":1" }}</div>
+            <div>
+                <h2 class="fw-bold mb-1 text-dark" style="font-size:1.5rem;">{{ deudor.nombre }} {{ deudor.apellido }}</h2>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-light text-secondary border" style="font-size:.75rem;">
+                        <i class="bi bi-card-text me-1"></i>{{ deudor.cedula }}
+                    </span>
+                    {% if role == 'admin' and deudor.gestor %}
+                    <span class="badge rounded-pill px-3" style="background:rgba(124,58,237,0.1);color:#7c3aed;font-size:.75rem;">
+                        <i class="bi bi-person-badge me-1"></i>{{ deudor.gestor.get_full_name|default:deudor.gestor.username }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        {% if role == 'admin' %}
+        <a href="{% url 'editar_deudor' deudor.pk %}" class="btn btn-sm border btn-light rounded-pill px-3">
+            <i class="bi bi-pencil me-1"></i> Editar
+        </a>
+        <a href="{% url 'eliminar_deudor' deudor.pk %}" class="btn btn-sm border text-danger btn-light rounded-pill px-3">
+            <i class="bi bi-trash3 me-1"></i> Eliminar
+        </a>
+        {% endif %}
+        <a href="{% url 'lista_deudores' %}" class="btn btn-sm btn-dark rounded-pill px-3">
+            <i class="bi bi-arrow-left me-1"></i> Volver
+        </a>
+    </div>
+</div>
+
+<!-- STATS ROW -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="mini-stat" style="--color:#22c55e; --bg:rgba(34,197,94,0.08);">
+            <i class="bi bi-cash-coin"></i>
+            <div>
+                <p>Abonado</p>
+                <h4>${{ total_abonado }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="mini-stat" style="--color:#f59e0b; --bg:rgba(245,158,11,0.08);">
+            <i class="bi bi-hourglass-split"></i>
+            <div>
+                <p>Pendiente</p>
+                <h4>${{ total_pendiente }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="mini-stat" style="--color:#ef4444; --bg:rgba(239,68,68,0.08);">
+            <i class="bi bi-x-circle-fill"></i>
+            <div>
+                <p>Rechazado</p>
+                <h4>${{ total_rechazado }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <!-- CTA: Nuevo pago desde el perfil -->
+        <a href="{% url 'crear_pago_deudor' deudor.pk %}" class="cta-nuevo-pago">
+            <i class="bi bi-plus-circle-fill fs-4"></i>
+            <div>
+                <p class="fw-bold mb-0" style="font-size:.85rem;">Registrar Pago</p>
+                <p class="mb-0 opacity-75" style="font-size:.75rem;">Para {{ deudor.nombre }}</p>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- INFO + HISTORIAL -->
+<div class="row g-4">
+    <!-- Datos de contacto -->
+    <div class="col-lg-3">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:14px;">
+            <div class="card-body p-4">
+                <h6 class="text-uppercase small fw-bold text-muted mb-4" style="letter-spacing:.8px;">Contacto</h6>
+
+                <div class="contact-row">
+                    <div class="contact-icon"><i class="bi bi-telephone"></i></div>
+                    <div>
+                        <p class="contact-label">Teléfono</p>
+                        <p class="contact-value">{{ deudor.telefono|default:"No registrado" }}</p>
+                    </div>
+                </div>
+                <div class="contact-row">
+                    <div class="contact-icon"><i class="bi bi-envelope"></i></div>
+                    <div>
+                        <p class="contact-label">Correo</p>
+                        <p class="contact-value">{{ deudor.email|default:"No registrado" }}</p>
+                    </div>
+                </div>
+                <div class="contact-row">
+                    <div class="contact-icon"><i class="bi bi-geo-alt"></i></div>
+                    <div>
+                        <p class="contact-label">Dirección</p>
+                        <p class="contact-value small">{{ deudor.direccion|default:"No registrada" }}</p>
+                    </div>
+                </div>
+                <hr class="my-3 opacity-25">
+                <div class="contact-row">
+                    <div class="contact-icon"><i class="bi bi-calendar-check"></i></div>
+                    <div>
+                        <p class="contact-label">Miembro desde</p>
+                        <p class="contact-value small">{{ deudor.fecha_registro|date:"d M, Y" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial de pagos -->
+    <div class="col-lg-9">
+        <div class="card border-0 shadow-sm" style="border-radius:14px; overflow:hidden;">
+            <div style="height:3px; background:linear-gradient(90deg,#3b6ef8,#60a5fa);"></div>
+            <div class="card-header bg-white border-0 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0 text-dark" style="font-size:1rem;">Historial de Movimientos</h5>
+                    <span id="contadorPagos" class="badge rounded-pill px-3 py-2 fw-medium" style="background:rgba(59,110,248,0.08);color:#3b6ef8;">
+                        {{ pagos|length }} registros
+                    </span>
+                </div>
+                <div class="search-box-inline">
+                    <i class="bi bi-search si"></i>
+                    <input type="text" id="buscadorHistorial" placeholder="Buscar por concepto, monto o estado&#x2026;" autocomplete="off">
+                    <button type="button" id="btnLimpiarH" class="ci d-none" onclick="limpiarH()"><i class="bi bi-x-circle-fill"></i></button>
+                </div>
+                <div id="sinResHistorial" class="d-none mt-2">
+                    <span class="text-muted small"><i class="bi bi-info-circle me-1"></i>Sin resultados para "<span id="termH"></span>"</span>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead style="background:#f8faff;">
+                        <tr>
+                            <th class="ps-4 border-0 text-muted small fw-bold text-uppercase" style="letter-spacing:.5px;">Concepto</th>
+                            <th class="border-0 text-muted small fw-bold text-uppercase">Monto</th>
+                            <th class="border-0 text-muted small fw-bold text-uppercase text-center">Vencimiento</th>
+                            <th class="border-0 text-muted small fw-bold text-uppercase text-center">Fecha Pago</th>
+                            <th class="border-0 text-muted small fw-bold text-uppercase text-center">Comprobante</th>
+                            <th class="border-0 text-muted small fw-bold text-uppercase text-center">Estado</th>
+                            <th class="border-0 text-muted small fw-bold text-uppercase text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pago in pagos %}
+                        <tr class="fila-pago" data-busqueda="{% if pago.descripcion %}{{ pago.descripcion|lower }}{% else %}pago de cuota{% endif %} {{ pago.monto }} {{ pago.estado }}">
+                            <td class="ps-4">
+                                <span class="text-dark fw-medium small s-concepto">{{ pago.descripcion|default:"Pago de cuota" }}</span>
+                            </td>
+                            <td><span class="fw-bold text-dark">${{ pago.monto }}</span></td>
+                            <td class="text-center small text-muted">{{ pago.fecha_vencimiento|date:"d/m/Y" }}</td>
+                            <td class="text-center small text-muted">{{ pago.fecha_pago|date:"d/m/Y"|default:"—" }}</td>
+                            <td class="text-center">
+                                {% if pago.comprobante_pdf %}
+                                <a href="{{ pago.comprobante_pdf.url }}" target="_blank" class="btn btn-sm rounded-pill px-2 py-1"
+                                   style="background:rgba(239,68,68,0.08);color:#dc2626;border:none;font-size:.75rem;">
+                                    <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+                                </a>
+                                {% else %}
+                                <span class="text-muted small">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if pago.estado == 'pagado' %}
+                                    <span class="estado-badge" style="background:rgba(34,197,94,0.1);color:#15803d;">Completado</span>
+                                {% elif pago.estado == 'pendiente' %}
+                                    <span class="estado-badge" style="background:rgba(245,158,11,0.1);color:#b45309;">Pendiente</span>
+                                {% elif pago.estado == 'rechazado' %}
+                                    <span class="estado-badge" style="background:rgba(239,68,68,0.1);color:#dc2626;">Rechazado</span>
+                                {% else %}
+                                    <span class="estado-badge" style="background:#f3f4f6;color:#6b7280;">{{ pago.estado|capfirst }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-light border rounded-circle shadow-sm p-1" type="button" data-bs-toggle="dropdown" style="width:30px;height:30px;">
+                                        <i class="bi bi-three-dots-vertical" style="font-size:.8rem;"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3" style="font-size:.85rem;">
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'editar_pago' pago.pk %}">
+                                                <i class="bi bi-pencil me-2 text-primary"></i> Editar
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="{% url 'eliminar_pago' pago.pk %}">
+                                                <i class="bi bi-trash3 me-2"></i> Eliminar
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-receipt fs-1 d-block mb-2 opacity-25"></i>
+                                <p class="mb-2">No hay pagos registrados para este cliente.</p>
+                                <a href="{% url 'crear_pago_deudor' deudor.pk %}" class="btn btn-primary btn-sm rounded-pill px-4">
+                                    <i class="bi bi-plus-lg me-1"></i> Registrar primer pago
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .big-avatar {
+        width:56px; height:56px; border-radius:14px;
+        background:rgba(59,110,248,0.1); color:#3b6ef8;
+        font-size:1.2rem; font-weight:800;
+        display:flex; align-items:center; justify-content:center;
+        flex-shrink:0;
+    }
+    .mini-stat {
+        background: var(--bg);
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.05);
+        padding: 16px;
+        display: flex; align-items: center; gap: 12px;
+        height: 100%;
+    }
+    .mini-stat i { font-size:1.6rem; color:var(--color); flex-shrink:0; }
+    .mini-stat p { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#9ca3af; margin:0; }
+    .mini-stat h4 { font-size:1.3rem; font-weight:800; color:#0f1623; margin:4px 0 0; }
+
+    .cta-nuevo-pago {
+        display: flex; align-items: center; gap: 12px;
+        background: #3b6ef8; border-radius: 12px;
+        padding: 16px; color: #fff;
+        text-decoration: none; height: 100%;
+        transition: all 0.2s ease;
+        border: none;
+    }
+    .cta-nuevo-pago:hover { background: #2563eb; transform: translateY(-2px); color:#fff; }
+
+    .contact-row { display:flex; align-items:flex-start; gap:12px; margin-bottom:16px; }
+    .contact-icon { width:34px; height:34px; border-radius:8px; background:#f3f4f6; color:#3b6ef8; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .contact-label { font-size:.7rem; color:#9ca3af; margin:0; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+    .contact-value { font-size:.85rem; color:#0f1623; margin:0; font-weight:500; }
+
+    .estado-badge { padding:4px 12px; border-radius:20px; font-size:.75rem; font-weight:600; display:inline-block; }
+
+    /* Buscador historial */
+    .search-box-inline { position:relative; }
+    .search-box-inline input {
+        width:100%; padding:.55rem 2.6rem .55rem 2.4rem;
+        font-size:.85rem; color:#0f1623; background:#f8faff;
+        border:1.5px solid #e5e7eb; border-radius:50px;
+        outline:none; font-family:inherit;
+        transition:border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-box-inline input:focus { border-color:#3b6ef8; box-shadow:0 0 0 3px rgba(59,110,248,0.1); background:#fff; }
+    .search-box-inline input::placeholder { color:#b0b7c3; }
+    .search-box-inline .si { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; font-size:.85rem; pointer-events:none; transition:color 0.2s; }
+    .search-box-inline:focus-within .si { color:#3b6ef8; }
+    .search-box-inline .ci { position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; padding:0; color:#b0b7c3; font-size:.95rem; cursor:pointer; line-height:1; transition:color 0.15s; }
+    .search-box-inline .ci:hover { color:#ef4444; }
+    mark.hl { background:rgba(59,110,248,0.15); color:#1e40af; border-radius:3px; padding:0 2px; }
+</style>
+
+<script>
+(function(){
+    var input = document.getElementById('buscadorHistorial');
+    if(!input) return;
+    var btnL = document.getElementById('btnLimpiarH');
+    var sinRes = document.getElementById('sinResHistorial');
+    var termEl = document.getElementById('termH');
+    var contador = document.getElementById('contadorPagos');
+    var filas = Array.from(document.querySelectorAll('.fila-pago'));
+    var total = filas.length;
+
+    filas.forEach(function(f){
+        var el = f.querySelector('.s-concepto'); if(el) el._o = el.textContent;
+    });
+
+    function norm(s){ return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
+    function hl(t,q){ if(!q) return t; var re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'); return t.replace(re,'<mark class="hl">$1</mark>'); }
+
+    function buscar(){
+        var raw = input.value;
+        var term = norm(raw);
+        btnL.classList.toggle('d-none',!raw);
+        var vis=0;
+        filas.forEach(function(f){
+            var ok = !term || norm(f.dataset.busqueda||'').includes(term);
+            f.style.display = ok ? '' : 'none';
+            if(ok) vis++;
+            var el = f.querySelector('.s-concepto');
+            if(el) el.innerHTML = (ok && term) ? hl(el._o, raw.trim()) : el._o;
+        });
+        contador.textContent = term
+            ? (vis===1 ? '1 registro' : vis+' registros')
+            : (total===1 ? '1 registro' : total+' registros');
+        sinRes.classList.toggle('d-none', !(vis===0 && term && total>0));
+        termEl.textContent = raw.trim();
+    }
+
+    input.addEventListener('input', buscar);
+    window.limpiarH = function(){ input.value=''; buscar(); input.focus(); };
+})();
+</script>
+
+{% endwith %}
+{% endblock %}

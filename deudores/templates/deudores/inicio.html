@@ -1,0 +1,261 @@
+{% extends 'deudores/base.html' %}
+{% block title %}Panel de Gestor{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-5">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark" style="font-size:1.6rem;">Panel de Control</h3>
+        <p class="text-muted small mb-0">Bienvenido, <strong>{{ user.get_full_name|default:user.username }}</strong> — resumen de tu cartera</p>
+    </div>
+</div>
+
+<!-- STATS -->
+<div class="row g-4 mb-5">
+
+    <!-- Total Deudores -->
+    <div class="col-md-4">
+        <div class="stat-card" style="--accent: #3b6ef8;">
+            <div class="stat-icon" style="background: rgba(59,110,248,0.1); color:#3b6ef8;">
+                <i class="bi bi-people-fill"></i>
+            </div>
+            <div class="stat-body">
+                <p class="stat-label">Total Deudores</p>
+                <h2 class="stat-value">{{ total_deudores }}</h2>
+                <a href="{% url 'lista_deudores' %}" class="stat-link" style="color:#3b6ef8;">
+                    Ver directorio <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+            <div class="stat-add">
+                <a href="{% url 'seleccionar_deudor' %}" class="btn-add" title="Agregar deudor a mi cartera">
+                    <i class="bi bi-plus-lg"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Pagos -->
+    <div class="col-md-4">
+        <div class="stat-card" style="--accent: #22c55e;">
+            <div class="stat-icon" style="background: rgba(34,197,94,0.1); color:#22c55e;">
+                <i class="bi bi-cash-stack"></i>
+            </div>
+            <div class="stat-body">
+                <p class="stat-label">Total Pagos</p>
+                <h2 class="stat-value">{{ total_pagos }}</h2>
+                <a href="{% url 'lista_pagos' %}" class="stat-link" style="color:#22c55e;">
+                    Ver recaudos <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagos Rechazados -->
+    <div class="col-md-4">
+        <div class="stat-card" style="--accent: #ef4444;">
+            <div class="stat-icon" style="background: rgba(239,68,68,0.1); color:#ef4444;">
+                <i class="bi bi-x-circle-fill"></i>
+            </div>
+            <div class="stat-body">
+                <p class="stat-label">Pagos Rechazados</p>
+                <h2 class="stat-value">{{ pagos_rechazados }}</h2>
+                <a href="{% url 'lista_pagos' %}?estado=rechazado" class="stat-link" style="color:#ef4444;">
+                    Revisar rechazos <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- DEUDORES RECIENTES -->
+<div class="section-header mb-3">
+    <h5 class="fw-bold text-dark mb-0">Deudores Recientes</h5>
+    <a href="{% url 'lista_deudores' %}" class="btn-ver-todos">Ver todos</a>
+</div>
+
+<!-- Buscador deudores recientes -->
+<div class="search-wrapper mb-3">
+    <div class="search-box-g">
+        <i class="bi bi-search si-g"></i>
+        <input type="text" id="buscadorRecientes" placeholder="Buscar por nombre o cédula&#x2026;" autocomplete="off">
+        <button type="button" id="btnLimpiarR" class="ci-g d-none" onclick="limpiarR()"><i class="bi bi-x-circle-fill"></i></button>
+    </div>
+    <span id="contadorRecientes" class="results-count-g"></span>
+</div>
+<div id="sinResRecientes" class="no-results-sm-g d-none mb-3">
+    <i class="bi bi-people me-2 opacity-50"></i>
+    <span class="text-muted small">Sin deudores que coincidan con "<span id="termR"></span>"</span>
+</div>
+
+<div id="tablaRecientes" class="card card-shadow border-0" style="border-radius:14px; overflow:hidden;">
+    <div style="height:3px; background: linear-gradient(90deg,#3b6ef8,#60a5fa);"></div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead style="background:#f8faff;">
+                <tr>
+                    <th class="ps-4 border-0 text-muted small fw-bold text-uppercase" style="letter-spacing:.5px;">Deudor</th>
+                    <th class="border-0 text-muted small fw-bold text-uppercase">Cédula</th>
+                    <th class="border-0 text-muted small fw-bold text-uppercase text-end">Pendiente</th>
+                    <th class="border-0 text-muted small fw-bold text-uppercase text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for deudor in deudores_recientes %}
+                <tr class="fila-rec" data-busqueda="{{ deudor.nombre|lower }} {{ deudor.apellido|lower }} {{ deudor.cedula }}">
+                    <td class="ps-4 py-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="avatar-initials">{{ deudor.nombre|slice:":1" }}{{ deudor.apellido|slice:":1" }}</div>
+                            <div>
+                                <div class="fw-semibold text-dark s-rnom" style="font-size:.9rem;">{{ deudor.nombre }} {{ deudor.apellido }}</div>
+                                <div class="text-muted" style="font-size:.78rem;">{{ deudor.email|default:"Sin correo" }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="font-monospace small text-secondary s-rced">{{ deudor.cedula }}</span></td>
+                    <td class="text-end"><span class="fw-bold text-danger">${{ deudor.total_pendiente|default:"0.00" }}</span></td>
+                    <td class="text-center">
+                        <a href="{% url 'detalle_deudor' deudor.pk %}" class="btn btn-sm btn-light border rounded-pill px-3">
+                            <i class="bi bi-eye me-1"></i> Ver
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center py-5 text-muted">
+                        <i class="bi bi-people fs-1 d-block mb-2 opacity-25"></i>
+                        Aún no tienes deudores asignados.
+                        <div class="mt-2">
+                            <a href="{% url 'seleccionar_deudor' %}" class="btn btn-primary btn-sm rounded-pill px-4">
+                                <i class="bi bi-plus-lg me-1"></i> Agregar deudor
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    /* Tarjetas de estadística */
+    .stat-card {
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid #e5e7eb;
+        padding: 24px;
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        position: relative;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+    .stat-icon {
+        width: 52px; height: 52px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.4rem; flex-shrink: 0;
+    }
+    .stat-body { flex: 1; }
+    .stat-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #9ca3af; margin: 0 0 4px; }
+    .stat-value { font-size: 2rem; font-weight: 800; color: #0f1623; margin: 0 0 8px; line-height: 1; }
+    .stat-link { font-size: .78rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+    .stat-link:hover { text-decoration: underline; }
+    .stat-add { position: absolute; top: 16px; right: 16px; }
+    .btn-add {
+        width: 30px; height: 30px; border-radius: 50%;
+        background: rgba(59,110,248,0.1); color: #3b6ef8;
+        display: flex; align-items: center; justify-content: center;
+        text-decoration: none; font-size: .9rem;
+        transition: all 0.2s;
+    }
+    .btn-add:hover { background: #3b6ef8; color: #fff; }
+
+    /* Sección */
+    .section-header { display: flex; align-items: center; justify-content: space-between; }
+    .btn-ver-todos { font-size:.8rem; font-weight:600; color:#3b6ef8; text-decoration:none; }
+    .btn-ver-todos:hover { text-decoration:underline; }
+
+    /* Avatar */
+    .avatar-initials {
+        width:40px; height:40px; border-radius:10px;
+        background: rgba(59,110,248,0.1); color:#3b6ef8;
+        font-weight:700; font-size:.85rem;
+        display:flex; align-items:center; justify-content:center;
+        flex-shrink:0;
+    }
+
+    /* Buscador recientes */
+    .search-wrapper { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+    .search-box-g { position:relative; flex:1; min-width:220px; max-width:440px; }
+    .search-box-g input {
+        width:100%; padding:.6rem 2.6rem .6rem 2.4rem;
+        font-size:.88rem; color:#0f1623; background:#fff;
+        border:1.5px solid #e5e7eb; border-radius:50px;
+        outline:none; font-family:inherit;
+        transition:border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-box-g input:focus { border-color:#3b6ef8; box-shadow:0 0 0 3px rgba(59,110,248,0.1); }
+    .search-box-g input::placeholder { color:#b0b7c3; }
+    .si-g { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; font-size:.9rem; pointer-events:none; transition:color 0.2s; }
+    .search-box-g:focus-within .si-g { color:#3b6ef8; }
+    .ci-g { position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; padding:0; color:#b0b7c3; font-size:.95rem; cursor:pointer; line-height:1; transition:color 0.15s; }
+    .ci-g:hover { color:#ef4444; }
+    .results-count-g { font-size:.78rem; font-weight:600; color:#9ca3af; white-space:nowrap; }
+    mark.hlg { background:rgba(59,110,248,0.15); color:#1e40af; border-radius:3px; padding:0 2px; }
+    .no-results-sm-g { display:flex; align-items:center; background:rgba(59,110,248,0.04); border:1px solid rgba(59,110,248,0.12); border-radius:10px; padding:10px 16px; }
+</style>
+
+<script>
+(function(){
+    var input = document.getElementById('buscadorRecientes');
+    if(!input) return;
+    var btnL = document.getElementById('btnLimpiarR');
+    var contador = document.getElementById('contadorRecientes');
+    var sinRes = document.getElementById('sinResRecientes');
+    var tabla = document.getElementById('tablaRecientes');
+    var termEl = document.getElementById('termR');
+    var filas = Array.from(document.querySelectorAll('.fila-rec'));
+    var total = filas.length;
+
+    filas.forEach(function(f){
+        ['s-rnom','s-rced'].forEach(function(c){
+            var el = f.querySelector('.'+c); if(el) el._o = el.textContent;
+        });
+    });
+
+    function norm(s){ return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
+    function hl(t,q){ if(!q) return t; var re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'); return t.replace(re,'<mark class="hlg">$1</mark>'); }
+
+    function buscar(){
+        var raw = input.value;
+        var term = norm(raw);
+        btnL.classList.toggle('d-none',!raw);
+        var vis=0;
+        filas.forEach(function(f){
+            var ok = !term || norm(f.dataset.busqueda||'').includes(term);
+            f.style.display = ok ? '' : 'none';
+            if(ok) vis++;
+            ['s-rnom','s-rced'].forEach(function(c){
+                var el = f.querySelector('.'+c); if(!el) return;
+                el.innerHTML = (ok && term) ? hl(el._o, raw.trim()) : el._o;
+            });
+        });
+        contador.textContent = term
+            ? (vis===1 ? '1 resultado' : vis+' resultados')
+            : (total===1 ? '1 deudor' : total+' deudores');
+        sinRes.classList.toggle('d-none', !(vis===0 && term && total>0));
+        if(tabla) tabla.style.display = (vis===0 && term && total>0) ? 'none' : '';
+        termEl.textContent = raw.trim();
+    }
+
+    if(total>0) contador.textContent = total===1 ? '1 deudor' : total+' deudores';
+    input.addEventListener('input', buscar);
+    window.limpiarR = function(){ input.value=''; buscar(); input.focus(); };
+})();
+</script>
+{% endblock %}

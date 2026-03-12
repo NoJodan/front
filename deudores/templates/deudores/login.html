@@ -1,0 +1,143 @@
+{% extends 'deudores/base.html' %}
+{% block title %}Iniciar Sesión{% endblock %}
+
+{% block content_login %}
+<div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="col-md-5 col-lg-4">
+
+        <div class="text-center mb-5 animate-fade-in">
+            <div class="brand-icon-wrapper mb-3">
+                <i class="bi bi-cash-stack"></i>
+            </div>
+            <h3 class="fw-bold text-dark mb-1">Sistema de Deudores</h3>
+            <p class="text-muted small">Panel de Administración Contable</p>
+        </div>
+
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden shadow-hover">
+            <div class="login-gradient-line"></div>
+            
+            <div class="card-body p-4 p-md-5">
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <div class="mb-4">
+                        <label class="form-label text-uppercase custom-label">Usuario</label>
+                        <div class="input-group custom-input-group">
+                            <span class="input-group-text border-0 bg-transparent ps-0">
+                                <i class="bi bi-person text-primary"></i>
+                            </span>
+                            <input type="text" name="username" class="form-control border-0 bg-transparent ps-1" 
+                                   placeholder="Nombre de usuario" required autofocus>
+                        </div>
+                        <div class="input-underline"></div>
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="form-label text-uppercase custom-label">Contraseña</label>
+                        <div class="input-group custom-input-group">
+                            <span class="input-group-text border-0 bg-transparent ps-0">
+                                <i class="bi bi-lock text-primary"></i>
+                            </span>
+                            <input type="password" name="password" class="form-control border-0 bg-transparent ps-1" 
+                                   placeholder="••••••••" required>
+                        </div>
+                        <div class="input-underline"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm btn-login mt-2">
+                        <span>Ingresar al Sistema</span>
+                        <i class="bi bi-arrow-right-short fs-5 ms-1"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="text-center mt-5">
+            <p class="text-muted x-small">© 2026 Plataforma de Gestión de Cobros</p>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    /* Estilos de Tipografía y Layout */
+    .custom-label {
+        font-size: 0.75rem;
+        letter-spacing: 1px;
+        font-weight: 700;
+        color: #6c757d;
+    }
+
+    .x-small {
+        font-size: 0.8rem;
+    }
+
+    /* Icono de Marca Animado */
+    .brand-icon-wrapper {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+        color: white;
+        font-size: 2.5rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 24px;
+        box-shadow: 0 10px 20px rgba(13, 110, 253, 0.2);
+    }
+
+    /* Línea de degradado superior */
+    .login-gradient-line {
+        height: 6px;
+        background: linear-gradient(90deg, #0d6efd, #0dcaf0, #0d6efd);
+        background-size: 200% auto;
+        animation: gradientMove 3s linear infinite;
+    }
+
+    /* Diseño de Inputs Minimalistas */
+    .custom-input-group .form-control:focus {
+        box-shadow: none;
+        outline: none;
+    }
+
+    .input-underline {
+        height: 1px;
+        background-color: #dee2e6;
+        transition: all 0.3s ease;
+    }
+
+    .mb-4:focus-within .input-underline, 
+    .mb-5:focus-within .input-underline {
+        background-color: #0d6efd;
+        height: 2px;
+    }
+
+    /* Botón de Login con Efecto */
+    .btn-login {
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-login:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(13, 110, 253, 0.4) !important;
+    }
+
+    /* Animaciones */
+    @keyframes gradientMove {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 200% 50%; }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.8s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,217 @@
+{% extends 'deudores/base.html' %}
+{% block title %}Deudores{% endblock %}
+
+{% block content %}
+{% with role=user.perfil.rol|default:"gestor" %}
+
+<div class="d-flex justify-content-between align-items-end mb-4 gap-3">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark" style="font-size:1.5rem;">
+            {% if role == 'admin' %}Todos los Deudores{% else %}Mis Deudores{% endif %}
+        </h3>
+        <p class="text-muted small mb-0">
+            {% if role == 'admin' %}Base de datos global del sistema{% else %}Deudores asignados a tu cartera{% endif %}
+        </p>
+    </div>
+    {% if role == 'admin' %}
+    <a href="{% url 'crear_deudor' %}" class="btn btn-sm px-4 rounded-pill fw-semibold" style="background:#059669;color:#fff;border:none;">
+        <i class="bi bi-person-plus-fill me-1"></i> Nuevo Deudor
+    </a>
+    {% else %}
+    <a href="{% url 'seleccionar_deudor' %}" class="btn btn-sm px-4 rounded-pill fw-semibold" style="background:#3b6ef8;color:#fff;border:none;">
+        <i class="bi bi-plus-lg me-1"></i> Agregar Deudor
+    </a>
+    {% endif %}
+</div>
+
+<!-- BUSCADOR -->
+<div class="search-wrapper mb-4">
+    <div class="search-box">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text" id="buscadorDeudores"
+               placeholder="Buscar por nombre, cédula{% if role == 'admin' %}, gestor{% endif %} o teléfono…"
+               autocomplete="off">
+        <button type="button" id="btnLimpiar" class="clear-btn d-none" onclick="limpiarBusqueda()">
+            <i class="bi bi-x-circle-fill"></i>
+        </button>
+    </div>
+    <span id="contadorResultados" class="results-count"></span>
+</div>
+
+<!-- Sin resultados -->
+<div id="sinResultados" class="no-results d-none">
+    <i class="bi bi-search opacity-25 display-5 d-block mb-2"></i>
+    <p class="mb-0 fw-semibold text-dark">Sin resultados</p>
+    <p class="text-muted small mb-0">No hay deudores que coincidan con "<span id="terminoBusqueda"></span>"</p>
+</div>
+
+<div id="tablaWrapper" class="card border-0 shadow-sm" style="border-radius:14px; overflow:hidden;">
+    <div style="height:3px; background: {% if role == 'admin' %}linear-gradient(90deg,#7c3aed,#a78bfa){% else %}linear-gradient(90deg,#3b6ef8,#60a5fa){% endif %};"></div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead style="background:#f8faff;">
+                    <tr>
+                        <th class="ps-4 border-0 text-uppercase small fw-bold text-muted" style="letter-spacing:.5px;">Deudor</th>
+                        <th class="border-0 text-uppercase small fw-bold text-muted">Cédula</th>
+                        <th class="border-0 text-uppercase small fw-bold text-muted">Teléfono</th>
+                        {% if role == 'admin' %}
+                        <th class="border-0 text-uppercase small fw-bold text-muted text-center">Gestor</th>
+                        {% endif %}
+                        <th class="border-0 text-uppercase small fw-bold text-muted text-center">Pagos</th>
+                        <th class="border-0 text-uppercase small fw-bold text-muted text-end">Abonado</th>
+                        <th class="border-0 text-uppercase small fw-bold text-muted text-end">Pendiente</th>
+                        <th class="border-0 text-uppercase small fw-bold text-muted text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for deudor in deudores %}
+                    <tr class="fila-item"
+                        data-busqueda="{{ deudor.nombre|lower }} {{ deudor.apellido|lower }} {{ deudor.cedula }} {{ deudor.telefono|lower }} {% if role == 'admin' %}{% if deudor.gestor %}{{ deudor.gestor.get_full_name|lower }} {{ deudor.gestor.username|lower }}{% endif %}{% endif %}">
+                        <td class="ps-4 py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar-initials {% if role == 'admin' %}admin{% endif %}">
+                                    {{ deudor.nombre|slice:":1" }}{{ deudor.apellido|slice:":1" }}
+                                </div>
+                                <div>
+                                    <div class="fw-semibold text-dark s-nombre" style="font-size:.9rem;">{{ deudor.nombre }} {{ deudor.apellido }}</div>
+                                    <div class="text-muted" style="font-size:.78rem;">{{ deudor.email|default:"Sin correo" }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="font-monospace small text-secondary s-cedula">{{ deudor.cedula }}</span></td>
+                        <td><span class="small text-dark">{{ deudor.telefono|default:"—" }}</span></td>
+                        {% if role == 'admin' %}
+                        <td class="text-center">
+                            {% if deudor.gestor %}
+                                <span class="badge rounded-pill px-3 py-2 fw-medium s-gestor" style="background:rgba(124,58,237,0.08);color:#7c3aed;font-size:.75rem;">
+                                    {{ deudor.gestor.get_full_name|default:deudor.gestor.username }}
+                                </span>
+                            {% else %}
+                                <span class="badge rounded-pill px-3 py-2 fw-medium" style="background:#f3f4f6;color:#9ca3af;font-size:.75rem;">Sin asignar</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        <td class="text-center">
+                            <span class="badge rounded-pill px-3 py-2 fw-medium" style="background:rgba(59,110,248,0.08);color:#3b6ef8;font-size:.75rem;">
+                                {{ deudor.total_pagos }} reg.
+                            </span>
+                        </td>
+                        <td class="text-end"><span class="fw-bold" style="color:#059669;">${{ deudor.total_abonado|default:"0.00" }}</span></td>
+                        <td class="text-end"><span class="fw-bold" style="color:#ef4444;">${{ deudor.total_pendiente|default:"0.00" }}</span></td>
+                        <td class="text-center">
+                            <a href="{% url 'detalle_deudor' deudor.pk %}" class="btn btn-sm btn-light border rounded-pill px-3" style="font-size:.8rem;">
+                                <i class="bi bi-arrow-right-short fs-6"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{% if role == 'admin' %}8{% else %}7{% endif %}" class="text-center py-5 text-muted">
+                            <i class="bi bi-people fs-1 d-block mb-2 opacity-25"></i>
+                            <p class="mb-2">No se encontraron deudores.</p>
+                            {% if role == 'gestor' %}
+                            <a href="{% url 'seleccionar_deudor' %}" class="btn btn-primary btn-sm rounded-pill px-4">
+                                <i class="bi bi-plus-lg me-1"></i> Agregar Deudor
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .avatar-initials {
+        width:40px; height:40px; border-radius:10px;
+        background:rgba(59,110,248,0.1); color:#3b6ef8;
+        font-weight:700; font-size:.85rem;
+        display:flex; align-items:center; justify-content:center;
+    }
+    .avatar-initials.admin { background:rgba(5,150,105,0.1); color:#059669; }
+
+    .search-wrapper { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+    .search-box { position:relative; flex:1; min-width:240px; max-width:500px; }
+    .search-box input {
+        width:100%; padding:.65rem 2.8rem .65rem 2.6rem;
+        font-size:.9rem; color:#0f1623; background:#fff;
+        border:1.5px solid #e5e7eb; border-radius:50px;
+        outline:none; font-family:inherit;
+        transition:border-color 0.2s, box-shadow 0.2s;
+    }
+    {% if role == 'admin' %}
+    .search-box input:focus { border-color:#059669; box-shadow:0 0 0 3px rgba(5,150,105,0.1); }
+    .search-box:focus-within .search-icon { color:#059669; }
+    {% else %}
+    .search-box input:focus { border-color:#3b6ef8; box-shadow:0 0 0 3px rgba(59,110,248,0.1); }
+    .search-box:focus-within .search-icon { color:#3b6ef8; }
+    {% endif %}
+    .search-box input::placeholder { color:#b0b7c3; }
+    .search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#9ca3af; font-size:.95rem; pointer-events:none; transition:color 0.2s; }
+    .clear-btn { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; padding:0; color:#b0b7c3; font-size:1rem; cursor:pointer; line-height:1; transition:color 0.15s; }
+    .clear-btn:hover { color:#ef4444; }
+    .results-count { font-size:.78rem; font-weight:600; color:#9ca3af; white-space:nowrap; }
+    mark.hl { background:rgba(59,110,248,0.15); color:#1e40af; border-radius:3px; padding:0 2px; }
+    mark.hl.green { background:rgba(5,150,105,0.15); color:#065f46; }
+    .no-results { text-align:center; padding:48px 20px; background:#fff; border-radius:14px; border:1px solid #e5e7eb; }
+</style>
+
+<script>
+(function(){
+    var input = document.getElementById('buscadorDeudores');
+    var btnL = document.getElementById('btnLimpiar');
+    var contador = document.getElementById('contadorResultados');
+    var sinRes = document.getElementById('sinResultados');
+    var wrapper = document.getElementById('tablaWrapper');
+    var termEl = document.getElementById('terminoBusqueda');
+    var isAdmin = {% if role == 'admin' %}true{% else %}false{% endif %};
+    var filas = Array.from(document.querySelectorAll('.fila-item'));
+    var total = filas.length;
+
+    filas.forEach(function(f){
+        ['s-nombre','s-cedula','s-gestor'].forEach(function(c){
+            var el = f.querySelector('.'+c); if(el) el._o = el.textContent;
+        });
+    });
+
+    function norm(s){ return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
+
+    function hl(t,q,green){
+        if(!q) return t;
+        var re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+        return t.replace(re,'<mark class="hl'+(green?' green':'')+'">$1</mark>');
+    }
+
+    function buscar(){
+        var raw = input.value;
+        var term = norm(raw);
+        btnL.classList.toggle('d-none', !raw);
+        var vis = 0;
+        filas.forEach(function(f){
+            var ok = !term || norm(f.dataset.busqueda||'').includes(term);
+            f.style.display = ok ? '' : 'none';
+            if(ok) vis++;
+            ['s-nombre','s-cedula','s-gestor'].forEach(function(c){
+                var el = f.querySelector('.'+c); if(!el) return;
+                el.innerHTML = (ok && term) ? hl(el._o, raw.trim(), isAdmin) : el._o;
+            });
+        });
+        contador.textContent = term
+            ? (vis===1 ? '1 resultado' : vis+' resultados')
+            : (total===1 ? '1 deudor' : total+' deudores');
+        sinRes.classList.toggle('d-none', !(vis===0 && term && total>0));
+        if(wrapper) wrapper.style.display = (vis===0 && term && total>0) ? 'none' : '';
+        termEl.textContent = raw.trim();
+    }
+
+    if(total>0) contador.textContent = total===1 ? '1 deudor' : total+' deudores';
+    input.addEventListener('input', buscar);
+    window.limpiarBusqueda = function(){ input.value=''; buscar(); input.focus(); };
+})();
+</script>
+
+{% endwith %}
+{% endblock %}
